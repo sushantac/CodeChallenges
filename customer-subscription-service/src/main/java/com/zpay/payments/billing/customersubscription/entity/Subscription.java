@@ -53,9 +53,9 @@ public class Subscription {
 
 	@NotNull
 	private LocalDate start_date;
-	
+
 	private LocalDate end_date;
-	
+
 	@Transient
 	private List<LocalDate> invoice_dates = new ArrayList<>();
 
@@ -131,44 +131,48 @@ public class Subscription {
 	}
 
 	public List<LocalDate> getInvoice_dates() {
-		
-		Integer duration_max_months_allowed = 3;
-		
-		//Calculate and return invoice Dates
-		LocalDate s_date = start_date;
-		LocalDate e_date = end_date;
-		
-		LocalDate qualifying_date = start_date;
-		if(SubscriptionType.MONTHLY.equals(subscription_type)) {
-			
-			int month_counter = 0;
-			
-			while(qualifying_date.isBefore(end_date)) {
+
+		int duration_months_max = 3;
+
+		// Calculate and return invoice Dates
+		LocalDate date_in_question = start_date;
+		LocalDate qualifying_date = null;
+
+		if (SubscriptionType.MONTHLY.equals(subscription_type)) {
+
+			for (int i = 0; i < duration_months_max; i++) {
 				
-				boolean is_valid_date = true;
-				try {
-					qualifying_date = LocalDate.of(start_date.getYear(), start_date.getMonth().ordinal() + month_counter, date_of_month);
-				}catch (DateTimeException e) {
-					//not a valid date, ignore it and continue to check next month
+				//check the length of month
+				if(date_in_question.lengthOfMonth() < date_of_month) {
+					//get the last date of current month
+					qualifying_date = LocalDate.of(date_in_question.getYear(), date_in_question.getMonth(), date_in_question.lengthOfMonth());
 					
-					is_valid_date = false;
+					//check if it is before the start date, if yes - get the first day of next month
+					if(qualifying_date.isBefore(start_date)) {
+						//now get the first date of next month, I don't want to miss a payment!
+						qualifying_date = qualifying_date.plusDays(1);	
+					}
+					
+				}else {
+					qualifying_date = LocalDate.of(date_in_question.getYear(), date_in_question.getMonth(), date_of_month);
 				}
 				
-				if(is_valid_date) {
+				if ((start_date.isBefore(qualifying_date) || start_date.isEqual(qualifying_date))
+						&& (end_date.isAfter(qualifying_date) || end_date.isEqual(qualifying_date))) {
+
 					invoice_dates.add(qualifying_date);
 				}
 				
-							
 				
+				//advance to next month
+				date_in_question = qualifying_date.plusMonths(1);
 			}
-			
-			
-		}else if(SubscriptionType.WEEKLY.equals(subscription_type)) {
-			
+
+		} else if (SubscriptionType.WEEKLY.equals(subscription_type)) {
+
 		}
-				
+
 		return invoice_dates;
 	}
-
 
 }
